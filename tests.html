@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Gym Cloud Receipts – Tests</title>
+  </head>
+  <body>
+    <h1>Gym Cloud Receipts – Test Runner</h1>
+    <p>
+      Open the developer console to see detailed logs. A simple summary appears
+      below.
+    </p>
+    <pre id="results"></pre>
+
+    <script type="module">
+      import { isOverdue, buildBillsCsv } from "./js/billingService.js";
+
+      const resultsEl = document.getElementById("results");
+
+      function log(line) {
+        console.log(line);
+        resultsEl.textContent += line + "\n";
+      }
+
+      function assertEqual(actual, expected, message) {
+        const ok =
+          actual instanceof Date && expected instanceof Date
+            ? actual.getTime() === expected.getTime()
+            : actual === expected;
+        if (ok) {
+          log("✓ " + message);
+        } else {
+          log(
+            "✗ " +
+              message +
+              " (expected: " +
+              JSON.stringify(expected) +
+              ", got: " +
+              JSON.stringify(actual) +
+              ")"
+          );
+        }
+      }
+
+      function runTests() {
+        log("Running billingService tests...");
+
+        const past = new Date();
+        past.setDate(past.getDate() - 1);
+        const future = new Date();
+        future.setDate(future.getDate() + 1);
+
+        assertEqual(
+          isOverdue(past.toISOString(), new Date()),
+          true,
+          "isOverdue returns true for past due date"
+        );
+
+        assertEqual(
+          isOverdue(future.toISOString(), new Date()),
+          false,
+          "isOverdue returns false for future due date"
+        );
+
+        const bills = [
+          {
+            id: "1",
+            memberId: "m1",
+            memberName: "Alice",
+            amount: "1000.00",
+            dueDate: "2025-01-10",
+            paid: false,
+            createdAt: "2025-01-01T00:00:00.000Z",
+          },
+          {
+            id: "2",
+            memberId: "m2",
+            memberName: "Bob",
+            amount: "1200.00",
+            dueDate: "2025-02-10",
+            paid: true,
+            createdAt: "2025-02-01T00:00:00.000Z",
+          },
+        ];
+
+        const csv = buildBillsCsv(bills);
+        log("Generated CSV:");
+        log(csv);
+
+        const lines = csv.split("\n");
+        assertEqual(lines.length, 3, "CSV has header + 2 rows");
+        assertEqual(
+          lines[0].includes("memberName"),
+          true,
+          "CSV header contains memberName column"
+        );
+
+        log("All tests executed.");
+      }
+
+      runTests();
+    </script>
+  </body>
+  </html>
+
+

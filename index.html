@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gym Cloud Receipts</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <!-- Logging library -->
+    <script src="https://unpkg.com/loglevel/dist/loglevel.min.js"></script>
+    <!-- Firebase (compat builds for simplicity in vanilla JS) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="app-sidebar" id="sidebar">
+        <div class="brand">
+          <div class="brand-logo">GYM</div>
+          <div class="brand-text">
+            <span class="brand-title">Cloud Receipts</span>
+            <span class="brand-subtitle">Paperless · Precise · Personal</span>
+          </div>
+        </div>
+        <nav class="nav" id="nav">
+          <button class="nav-item active" data-target="view-login">
+            Login
+          </button>
+          <button class="nav-item" data-target="view-admin" data-role="admin">
+            Admin
+          </button>
+          <button class="nav-item" data-target="view-member" data-role="member">
+            Member
+          </button>
+          <button class="nav-item" data-target="view-user" data-role="user">
+            User
+          </button>
+        </nav>
+        <div class="sidebar-footer">
+          <span id="current-user-label" class="muted">Not signed in</span>
+          <button id="btn-logout" class="btn-secondary btn-ghost small">
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      <main class="app-main">
+        <header class="app-header">
+          <div class="header-primary">
+            <p class="kicker">Welcome back</p>
+            <h1>Gym Cloud Receipts</h1>
+            <p class="muted">
+              Track all your bills, members, and notifications in one modern
+              dashboard.
+            </p>
+          </div>
+          <div class="header-meta">
+            <div class="header-search">
+              <input
+                type="search"
+                placeholder="Quick search (members, bills…) "
+                aria-label="Quick search"
+              />
+            </div>
+            <div class="header-profile">
+              <span class="pill pill-soft" id="role-pill">Guest</span>
+              <div class="header-avatar">GC</div>
+            </div>
+          </div>
+        </header>
+
+        <section class="app-content">
+          <!-- Login View -->
+          <section id="view-login" class="view active">
+            <div class="grid-2">
+              <div>
+                <h2>Welcome back</h2>
+                <p class="muted">
+                  Sign in with your gym account to access receipts, members,
+                  and reports.
+                </p>
+                <form id="form-login" class="card form">
+                  <label class="field">
+                    <span>Email</span>
+                    <input
+                      type="email"
+                      id="login-email"
+                      required
+                      autocomplete="email"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Password</span>
+                    <input
+                      type="password"
+                      id="login-password"
+                      required
+                      autocomplete="current-password"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Role</span>
+                    <select id="login-role" required>
+                      <option value="admin">Admin</option>
+                      <option value="member">Member</option>
+                      <option value="user">User</option>
+                    </select>
+                  </label>
+                  <button type="submit" class="btn-primary full">
+                    Continue
+                  </button>
+                  <p class="form-help muted">
+                    Roles are mapped to your profile in Firebase. Use Admin for
+                    gym owner / front-desk, Member for gym members, and User
+                    for read-only search.
+                    <br />
+                    <button
+                      type="button"
+                      class="link-button"
+                      id="btn-show-signup"
+                    >
+                      Need an account? Sign up
+                    </button>
+                  </p>
+                </form>
+                <form
+                  id="form-signup"
+                  class="card form"
+                  style="display: none; margin-top: 10px"
+                >
+                  <h3>Create an account</h3>
+                  <label class="field">
+                    <span>Full Name (optional)</span>
+                    <input type="text" id="signup-name" />
+                  </label>
+                  <label class="field">
+                    <span>Email</span>
+                    <input
+                      type="email"
+                      id="signup-email"
+                      required
+                      autocomplete="email"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Password</span>
+                    <input
+                      type="password"
+                      id="signup-password"
+                      required
+                      autocomplete="new-password"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Confirm Password</span>
+                    <input
+                      type="password"
+                      id="signup-password-confirm"
+                      required
+                      autocomplete="new-password"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Role</span>
+                    <select id="signup-role" required>
+                      <option value="member">Member</option>
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
+                  <button type="submit" class="btn-primary full">
+                    Sign up
+                  </button>
+                  <p class="form-help muted">
+                    Accounts created here are stored in Firebase Authentication
+                    and linked with a role in Firestore.
+                    <br />
+                    <button
+                      type="button"
+                      class="link-button"
+                      id="btn-show-login"
+                    >
+                      Already have an account? Sign in
+                    </button>
+                  </p>
+                </form>
+              </div>
+              <div class="hero-card card">
+                <h3>Why Cloud Receipts?</h3>
+                <ul class="list-check">
+                  <li>No more lost paper receipts.</li>
+                  <li>Instant fee reminders and notifications.</li>
+                  <li>Exportable reports for audits and insights.</li>
+                  <li>Room to grow: supplements, diet plans, PT & more.</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <!-- Admin View -->
+          <section id="view-admin" class="view">
+            <div class="view-header">
+              <h2>Admin Console</h2>
+              <p class="muted">
+                Manage members, receipts, notifications, and exports.
+              </p>
+            </div>
+            <div class="tabs" data-tabs="admin-tabs">
+              <button class="tab active" data-tab="admin-members">
+                Members
+              </button>
+              <button class="tab" data-tab="admin-billing">Billing</button>
+              <button class="tab" data-tab="admin-notifications">
+                Notifications
+              </button>
+              <button class="tab" data-tab="admin-reports">Reports</button>
+              <button class="tab" data-tab="admin-supplements">
+                Supplements
+              </button>
+              <button class="tab" data-tab="admin-diet">Diet Details</button>
+            </div>
+
+            <div class="tab-panels">
+              <!-- Members tab -->
+              <div
+                class="tab-panel active"
+                id="admin-members"
+                data-panel="admin-members"
+              >
+                <div class="grid-2">
+                  <form id="form-member" class="card form">
+                    <h3>Add / Update Member</h3>
+                    <input type="hidden" id="member-id" />
+                    <label class="field">
+                      <span>Full Name</span>
+                      <input type="text" id="member-name" required />
+                    </label>
+                    <label class="field">
+                      <span>Email</span>
+                      <input type="email" id="member-email" required />
+                    </label>
+                    <label class="field">
+                      <span>Phone</span>
+                      <input type="tel" id="member-phone" required />
+                    </label>
+                    <label class="field">
+                      <span>Fee Package</span>
+                      <select id="member-package"></select>
+                    </label>
+                    <div class="form-row">
+                      <button type="submit" class="btn-primary">
+                        Save Member
+                      </button>
+                      <button
+                        type="button"
+                        id="btn-member-reset"
+                        class="btn-secondary btn-ghost"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </form>
+
+                  <div class="card">
+                    <div class="card-header">
+                      <h3>Members</h3>
+                      <input
+                        type="search"
+                        id="search-members"
+                        placeholder="Search by name or email…"
+                      />
+                    </div>
+                    <div
+                      id="members-list"
+                      class="table-scroll"
+                      aria-label="Members list"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Billing tab -->
+              <div
+                class="tab-panel"
+                id="admin-billing"
+                data-panel="admin-billing"
+              >
+                <div class="grid-2">
+                  <form id="form-bill" class="card form">
+                    <h3>Create Bill</h3>
+                    <label class="field">
+                      <span>Member</span>
+                      <select id="bill-member" required></select>
+                    </label>
+                    <label class="field">
+                      <span>Amount</span>
+                      <input
+                        type="number"
+                        id="bill-amount"
+                        step="0.01"
+                        required
+                      />
+                    </label>
+                    <label class="field">
+                      <span>Due Date</span>
+                      <input type="date" id="bill-due" required />
+                    </label>
+                    <label class="field checkbox">
+                      <input type="checkbox" id="bill-paid" />
+                      <span>Mark as paid</span>
+                    </label>
+                    <button type="submit" class="btn-primary full">
+                      Create Bill &amp; Notify
+                    </button>
+                  </form>
+
+                  <div class="card">
+                    <div class="card-header">
+                      <h3>Recent Bills</h3>
+                    </div>
+                    <div
+                      id="bills-list"
+                      class="table-scroll"
+                      aria-label="Bills list"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notifications tab -->
+              <div
+                class="tab-panel"
+                id="admin-notifications"
+                data-panel="admin-notifications"
+              >
+                <div class="grid-2">
+                  <form id="form-monthly-notifications" class="card form">
+                    <h3>Monthly Fee Notifications</h3>
+                    <p class="muted">
+                      Generate upcoming fee notifications for all active
+                      members. This simulates a monthly job.
+                    </p>
+                    <label class="field">
+                      <span>Month</span>
+                      <input
+                        type="month"
+                        id="notif-month"
+                        required
+                      />
+                    </label>
+                    <button type="submit" class="btn-primary">
+                      Generate Notifications
+                    </button>
+                  </form>
+
+                  <div class="card">
+                    <div class="card-header">
+                      <h3>Latest Notifications</h3>
+                    </div>
+                    <div
+                      id="notifications-list"
+                      class="table-scroll"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Reports tab -->
+              <div
+                class="tab-panel"
+                id="admin-reports"
+                data-panel="admin-reports"
+              >
+                <div class="grid-2 single-wide">
+                  <div class="card form">
+                    <h3>Export Reports</h3>
+                    <p class="muted">
+                      Export billing data to CSV for accounting, audits, or
+                      offline analysis.
+                    </p>
+                    <label class="field">
+                      <span>Date range (optional)</span>
+                      <div class="form-row">
+                        <input type="date" id="report-from" />
+                        <input type="date" id="report-to" />
+                      </div>
+                    </label>
+                    <button
+                      id="btn-export-bills"
+                      type="button"
+                      class="btn-primary"
+                    >
+                      Export Bills CSV
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Supplements tab -->
+              <div
+                class="tab-panel"
+                id="admin-supplements"
+                data-panel="admin-supplements"
+              >
+                <div class="grid-2">
+                  <form id="form-supplement" class="card form">
+                    <h3>Supplement Store</h3>
+                    <label class="field">
+                      <span>Name</span>
+                      <input type="text" id="supp-name" required />
+                    </label>
+                    <label class="field">
+                      <span>Price</span>
+                      <input
+                        type="number"
+                        id="supp-price"
+                        step="0.01"
+                        required
+                      />
+                    </label>
+                    <label class="field">
+                      <span>Description</span>
+                      <textarea
+                        id="supp-description"
+                        rows="3"
+                        required
+                      ></textarea>
+                    </label>
+                    <label class="field checkbox">
+                      <input type="checkbox" id="supp-instock" checked />
+                      <span>In stock</span>
+                    </label>
+                    <button type="submit" class="btn-primary">Save Item</button>
+                  </form>
+
+                  <div class="card">
+                    <div class="card-header">
+                      <h3>Store Inventory</h3>
+                    </div>
+                    <div
+                      id="supplements-list"
+                      class="table-scroll"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Diet tab -->
+              <div
+                class="tab-panel"
+                id="admin-diet"
+                data-panel="admin-diet"
+              >
+                <div class="grid-2">
+                  <form id="form-diet" class="card form">
+                    <h3>Diet Details</h3>
+                    <label class="field">
+                      <span>Member (optional)</span>
+                      <select id="diet-member">
+                        <option value="">General plan</option>
+                      </select>
+                    </label>
+                    <label class="field">
+                      <span>Plan Title</span>
+                      <input type="text" id="diet-title" required />
+                    </label>
+                    <label class="field">
+                      <span>Details</span>
+                      <textarea
+                        id="diet-details"
+                        rows="5"
+                        placeholder="Breakfast, Lunch, Dinner, Snacks…"
+                        required
+                      ></textarea>
+                    </label>
+                    <button type="submit" class="btn-primary">
+                      Save Diet Plan
+                    </button>
+                  </form>
+
+                  <div class="card">
+                    <div class="card-header">
+                      <h3>Diet Library</h3>
+                    </div>
+                    <div id="diet-list" class="table-scroll"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Member View -->
+          <section id="view-member" class="view">
+            <div class="view-header">
+              <h2>Member Dashboard</h2>
+              <p class="muted">
+                View your bills, receipts, and notifications in one place.
+              </p>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header">
+                  <h3>Your Bills</h3>
+                </div>
+                <div
+                  id="member-bills-list"
+                  class="table-scroll"
+                ></div>
+              </div>
+              <div class="card">
+                <div class="card-header">
+                  <h3>Notifications</h3>
+                </div>
+                <div
+                  id="member-notifications-list"
+                  class="table-scroll"
+                ></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- User View -->
+          <section id="view-user" class="view">
+            <div class="view-header">
+              <h2>Records Explorer</h2>
+              <p class="muted">
+                Search members and receipts with read-only access.
+              </p>
+            </div>
+            <div class="grid-2 single-wide">
+              <form id="form-search-records" class="card form">
+                <h3>Search Records</h3>
+                <label class="field">
+                  <span>By email</span>
+                  <input
+                    type="email"
+                    id="search-email"
+                    placeholder="member@example.com"
+                    required
+                  />
+                </label>
+                <button type="submit" class="btn-primary">
+                  Search
+                </button>
+              </form>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3>Search Result</h3>
+                </div>
+                <div id="search-result" class="table-scroll"></div>
+              </div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+  </html>
+
+
