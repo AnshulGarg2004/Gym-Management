@@ -24,6 +24,16 @@ let memberProfile = null;
 let membersCache = [];
 let billsCache = [];
 
+// Predefined fee packages
+const feePackages = [
+  { id: 'basic', name: 'Basic Monthly', price: 1500 },
+  { id: 'premium', name: 'Premium Monthly', price: 2500 },
+  { id: 'annual', name: 'Annual Package', price: 15000 },
+  { id: 'student', name: 'Student Discount', price: 1200 },
+  { id: 'family', name: 'Family Package', price: 4000 },
+  { id: 'personal_training', name: 'Personal Training', price: 3500 }
+];
+
 const views = {};
 const navButtons = [];
 
@@ -31,6 +41,18 @@ const els = {};
 
 function $(id) {
   return document.getElementById(id);
+}
+
+function populateFeePackages() {
+  if (!els.memberPackage) {
+    console.warn('Member package select element not found');
+    return;
+  }
+  const optionsHtml = feePackages
+    .map(pkg => `<option value="${pkg.id}" data-price="${pkg.price}">${pkg.name} - ₹${pkg.price}</option>`)
+    .join('');
+  els.memberPackage.innerHTML = `<option value="">Select package</option>${optionsHtml}`;
+  console.log('Fee packages populated:', feePackages.length);
 }
 
 function collectElements() {
@@ -71,6 +93,15 @@ function collectElements() {
   els.btnMemberReset = $("btn-member-reset");
   els.membersList = $("members-list");
   els.searchMembers = $("search-members");
+  
+  // Debug: Check if member form elements are found
+  console.log('Member form elements:', {
+    formMember: !!els.formMember,
+    memberName: !!els.memberName,
+    memberEmail: !!els.memberEmail,
+    memberPhone: !!els.memberPhone,
+    memberPackage: !!els.memberPackage
+  });
 
   // Admin: billing
   els.formBill = $("form-bill");
@@ -180,7 +211,11 @@ function updateRoleUI() {
 
   navButtons.forEach((btn) => {
     const navRole = btn.getAttribute("data-role");
-    if (!navRole) return;
+    if (!navRole) {
+      // Login button - always show
+      btn.style.display = currentRole === "guest" ? "" : "none";
+      return;
+    }
     const show = currentRole === navRole;
     btn.style.display = show ? "" : "none";
   });
@@ -196,7 +231,10 @@ function setUserContext(user, role = "guest") {
       els.currentUserLabel.textContent = "Not signed in";
     }
   }
-  updateRoleUI();
+  // Small delay to prevent flashing
+  setTimeout(() => {
+    updateRoleUI();
+  }, 50);
 }
 
 function showAuthMode(mode) {
@@ -254,13 +292,10 @@ async function handleLoginSubmit(ev) {
     setUserContext(user, resolvedRole);
     await loadPostLoginData();
     showToast(`Welcome, ${resolvedRole}!`);
-    showView(resolvedRole === "admin" ? "view-admin" : resolvedRole === "member" ? "view-member" : "view-user");
+    const targetView = resolvedRole === "admin" ? "view-admin" : resolvedRole === "member" ? "view-member" : "view-user";
+    showView(targetView);
     const navTarget = Array.from(navButtons).find(
-      (btn) => btn.getAttribute("data-target") === (resolvedRole === "admin"
-          ? "view-admin"
-          : resolvedRole === "member"
-          ? "view-member"
-          : "view-user")
+      (btn) => btn.getAttribute("data-target") === targetView
     );
     if (navTarget) activateNav(navTarget);
   } catch (err) {
@@ -313,21 +348,10 @@ async function handleSignupSubmit(ev) {
     setUserContext(user, resolvedRole);
     await loadPostLoginData();
     showToast(`Welcome, ${resolvedRole}! Account created.`);
-    showView(
-      resolvedRole === "admin"
-        ? "view-admin"
-        : resolvedRole === "member"
-        ? "view-member"
-        : "view-user"
-    );
+    const targetView = resolvedRole === "admin" ? "view-admin" : resolvedRole === "member" ? "view-member" : "view-user";
+    showView(targetView);
     const navTarget = Array.from(navButtons).find(
-      (btn) =>
-        btn.getAttribute("data-target") ===
-        (resolvedRole === "admin"
-          ? "view-admin"
-          : resolvedRole === "member"
-          ? "view-member"
-          : "view-user")
+      (btn) => btn.getAttribute("data-target") === targetView
     );
     if (navTarget) activateNav(navTarget);
   } catch (err) {
@@ -377,7 +401,7 @@ function renderMembersTable(members) {
         <td>${m.name || ""}</td>
         <td>${m.email || ""}</td>
         <td>${m.phone || ""}</td>
-        <td>${m.packageName || ""}</td>
+        <td>${m.packageName || ""} ${m.packagePrice ? `(₹${m.packagePrice})` : ''}</td>
         <td>
           <button class="btn-secondary small" data-action="edit">Edit</button>
           <button class="btn-secondary small" data-action="delete">Delete</button>
@@ -418,32 +442,60 @@ function updateMemberSelects(members) {
 
 async function handleMemberSubmit(ev) {
   ev.preventDefault();
+  console.log('Member form submitted'); // Debug log
+  
+  // Check if elements exist
+  if (!els.memberName || !els.memberEmail) {
+    console.error('Member form elements not found');
+    showToast("Form elements not found. Please refresh the page.", "error");
+    return;
+  }
+  
+  const name = els.memberName.value.trim();
+  const email = els.memberEmail.value.trim();
+  
+  console.log('Member form data:', { name, email }); // Debug log
+  
+  if (!name || !email) {
+    showToast("Name and email are required.", "error");
+    return;
+  }
+  
+  const selectedPackage = feePackages.find(pkg => pkg.id === els.memberPackage.value);
   const payload = {
-    name: els.memberName.value.trim(),
-    email: els.memberEmail.value.trim(),
+    name,
+    email,
     phone: els.memberPhone.value.trim(),
-    packageName: els.memberPackage.value,
+    packageId: els.memberPackage.value,
+    packageName: selectedPackage ? selectedPackage.name : '',
+    packagePrice: selectedPackage ? selectedPackage.price : 0,
     updatedAt: new Date().toISOString(),
   };
+  
   const id = els.memberId.value;
-  const ref = getMembersCollection();
+  
   try {
+    const ref = getMembersCollection();
+    console.log('Got members collection'); // Debug log
+    
     if (id) {
       await ref.doc(id).update(payload);
-      appLogger.info("member_updated", { id });
       showToast("Member updated.");
+      appLogger.info("member_updated", { id });
     } else {
       payload.createdAt = new Date().toISOString();
       const docRef = await ref.add(payload);
-      appLogger.info("member_created", { id: docRef.id });
       showToast("Member created.");
+      appLogger.info("member_created", { id: docRef.id });
     }
+    
     els.formMember.reset();
     els.memberId.value = "";
     await loadMembers();
   } catch (err) {
+    console.error('Member save error:', err); // Debug log
     appLogger.error("member_save_failed", { error: String(err) });
-    showToast("Failed to save member.", "error");
+    showToast("Failed to save member: " + err.message, "error");
   }
 }
 
@@ -462,7 +514,7 @@ function handleMemberTableClick(ev) {
     els.memberName.value = member.name || "";
     els.memberEmail.value = member.email || "";
     els.memberPhone.value = member.phone || "";
-    els.memberPackage.value = member.packageName || "";
+    els.memberPackage.value = member.packageId || "";
   } else if (action === "delete") {
     const confirmed = window.confirm(
       `Delete member "${member.name || member.email}"?`
@@ -684,11 +736,20 @@ async function handleExportBills() {
 
 async function handleSupplementSubmit(ev) {
   ev.preventDefault();
+  console.log('Supplement form submitted'); // Debug log
+  
   const name = els.suppName.value.trim();
   const price = parseFloat(els.suppPrice.value);
   const description = els.suppDescription.value.trim();
   const inStock = !!els.suppInStock.checked;
-  if (!name || !price) return;
+  
+  console.log('Supplement data:', { name, price, description, inStock }); // Debug log
+  
+  if (!name || !price) {
+    showToast("Name and price are required.", "error");
+    return;
+  }
+  
   const doc = {
     name,
     price: price.toFixed(2),
@@ -696,16 +757,19 @@ async function handleSupplementSubmit(ev) {
     inStock,
     createdAt: new Date().toISOString(),
   };
+  
   try {
     const ref = getSupplementsCollection();
+    console.log('Got supplements collection'); // Debug log
     const added = await ref.add(doc);
     appLogger.info("supplement_saved", { id: added.id });
     els.formSupplement.reset();
     await loadSupplements();
     showToast("Supplement saved.");
   } catch (err) {
+    console.error('Supplement save error:', err); // Debug log
     appLogger.error("supplement_save_failed", { error: String(err) });
-    showToast("Failed to save supplement.", "error");
+    showToast("Failed to save supplement: " + err.message, "error");
   }
 }
 
@@ -745,15 +809,25 @@ async function loadSupplements() {
 
 async function handleDietSubmit(ev) {
   ev.preventDefault();
+  console.log('Diet form submitted'); // Debug log
+  
   const memberId = els.dietMember.value || null;
   const title = els.dietTitle.value.trim();
   const details = els.dietDetails.value.trim();
-  if (!title || !details) return;
+  
+  console.log('Diet data:', { memberId, title, details }); // Debug log
+  
+  if (!title || !details) {
+    showToast("Title and details are required.", "error");
+    return;
+  }
+  
   let memberName = null;
   if (memberId) {
     const m = membersCache.find((m) => m.id === memberId);
     memberName = m ? m.name : null;
   }
+  
   const doc = {
     memberId,
     memberName,
@@ -761,16 +835,19 @@ async function handleDietSubmit(ev) {
     details,
     createdAt: new Date().toISOString(),
   };
+  
   try {
     const ref = getDietsCollection();
+    console.log('Got diets collection'); // Debug log
     const added = await ref.add(doc);
     appLogger.info("diet_saved", { id: added.id });
     els.formDiet.reset();
     await loadDiets();
     showToast("Diet plan saved.");
   } catch (err) {
+    console.error('Diet save error:', err); // Debug log
     appLogger.error("diet_save_failed", { error: String(err) });
-    showToast("Failed to save diet plan.", "error");
+    showToast("Failed to save diet plan: " + err.message, "error");
   }
 }
 
@@ -968,6 +1045,8 @@ function setupAdminTabs() {
 
 async function loadPostLoginData() {
   if (currentRole === "admin") {
+    // Ensure fee packages are populated for admin
+    populateFeePackages();
     await Promise.all([
       loadMembers(),
       loadBills(),
@@ -979,6 +1058,8 @@ async function loadPostLoginData() {
     await loadMemberDashboard();
   }
 }
+
+
 
 function attachEventListeners() {
   if (els.formLogin) {
@@ -997,7 +1078,10 @@ function attachEventListeners() {
     els.btnShowLogin.addEventListener("click", () => showAuthMode("login"));
   }
   if (els.formMember) {
+    console.log('Attaching member form submit listener'); // Debug log
     els.formMember.addEventListener("submit", handleMemberSubmit);
+  } else {
+    console.error('Member form not found when attaching listeners'); // Debug log
   }
   if (els.btnMemberReset) {
     els.btnMemberReset.addEventListener("click", () => {
@@ -1024,25 +1108,111 @@ function attachEventListeners() {
     els.btnExportBills.addEventListener("click", handleExportBills);
   }
   if (els.formSupplement) {
+    console.log('Supplement form found, attaching listener'); // Debug log
     els.formSupplement.addEventListener("submit", handleSupplementSubmit);
+  } else {
+    console.log('Supplement form not found'); // Debug log
   }
   if (els.formDiet) {
+    console.log('Diet form found, attaching listener'); // Debug log
     els.formDiet.addEventListener("submit", handleDietSubmit);
+  } else {
+    console.log('Diet form not found'); // Debug log
   }
   if (els.formSearchRecords) {
     els.formSearchRecords.addEventListener("submit", handleSearchRecords);
   }
+  
+  // Dashboard quick actions
+  if (els.btnAddMember) {
+    els.btnAddMember.addEventListener("click", () => {
+      showView("view-admin");
+      const adminBtn = navButtons.find(btn => btn.getAttribute("data-target") === "view-admin");
+      if (adminBtn) activateNav(adminBtn);
+      // Focus on member name field
+      setTimeout(() => {
+        if (els.memberName) els.memberName.focus();
+      }, 100);
+    });
+  }
+  
+  if (els.btnCreateBill) {
+    els.btnCreateBill.addEventListener("click", () => {
+      showView("view-admin");
+      const adminBtn = navButtons.find(btn => btn.getAttribute("data-target") === "view-admin");
+      if (adminBtn) activateNav(adminBtn);
+      // Switch to billing tab
+      const billingTab = document.querySelector('[data-tab="admin-billing"]');
+      if (billingTab) billingTab.click();
+    });
+  }
+  
+  if (els.btnSendReminders) {
+    els.btnSendReminders.addEventListener("click", async () => {
+      try {
+        const billsRef = getBillsCollection();
+        const overdueSnap = await billsRef.where("paid", "==", false).get();
+        const overdueBills = overdueSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const actualOverdue = overdueBills.filter(b => isOverdue(b.dueDate));
+        
+        if (actualOverdue.length === 0) {
+          showToast("No overdue bills found.");
+          return;
+        }
+        
+        // Create notifications for overdue bills
+        const notifRef = getNotificationsCollection();
+        for (const bill of actualOverdue) {
+          await notifRef.add({
+            memberId: bill.memberId,
+            type: "overdue_reminder",
+            title: "Overdue Payment Reminder",
+            message: `Your bill of ₹${bill.amount} due on ${bill.dueDate} is overdue. Please pay as soon as possible.`,
+            createdAt: new Date().toISOString(),
+            read: false,
+          });
+        }
+        
+        showToast(`Sent ${actualOverdue.length} overdue reminders.`);
+        await loadDashboardData(); // Refresh dashboard
+      } catch (err) {
+        appLogger.error("send_reminders_failed", { error: String(err) });
+        showToast("Failed to send reminders.", "error");
+      }
+    });
+  }
 }
 
 async function bootstrap() {
-  collectElements();
-  setupNav();
-  setupAdminTabs();
-  attachEventListeners();
-  showAuthMode("login");
-  setUserContext(null, "guest");
+  try {
+    collectElements();
+    populateFeePackages();
+    
+    // Retry fee packages population after a short delay if it failed
+    setTimeout(() => {
+      if (!els.memberPackage || !els.memberPackage.options || els.memberPackage.options.length <= 1) {
+        console.log('Retrying fee packages population');
+        collectElements(); // Re-collect elements
+        populateFeePackages();
+      }
+    }, 100);
+    
+    setupNav();
+    setupAdminTabs();
+    attachEventListeners();
+    showAuthMode("login");
+    setUserContext(null, "guest");
+  } catch (err) {
+    console.error("Bootstrap setup error:", err);
+    showToast("Application setup failed: " + err.message, "error");
+  }
 
   try {
+    // Check if Firebase is available
+    if (!window.firebase) {
+      throw new Error("Firebase not loaded. Please check your internet connection.");
+    }
+    
     initFirebase();
     onAuthStateChanged(async (user) => {
       if (!user) {
@@ -1057,20 +1227,18 @@ async function bootstrap() {
       const role = await resolveUserRole(user);
       setUserContext(user, role);
       await loadPostLoginData();
-      if (role === "admin") {
-        showView("view-admin");
-      } else if (role === "member") {
-        showView("view-member");
-      } else {
-        showView("view-user");
-      }
+      const targetView = role === "admin" ? "view-admin" : role === "member" ? "view-member" : "view-user";
+      showView(targetView);
+      const navTarget = navButtons.find(btn => btn.getAttribute("data-target") === targetView);
+      if (navTarget) activateNav(navTarget);
     });
   } catch (err) {
     appLogger.error("bootstrap_failed", { error: String(err) });
     showToast(
-      "Failed to initialize Firebase. Check your firebaseConfig.js.",
+      "Failed to initialize Firebase: " + err.message,
       "error"
     );
+    console.error("Bootstrap error:", err);
   }
 }
 

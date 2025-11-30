@@ -1,15 +1,15 @@
 :root {
-  --bg: #050608;
-  --bg-elevated: #111827;
-  --bg-elevated-soft: #1f2933;
+  --bg: #0f1419;
+  --bg-elevated: #1a202c;
+  --bg-elevated-soft: #2d3748;
   --accent: #f97316; /* warm orange */
   --accent-soft: rgba(249, 115, 22, 0.12);
   --accent-strong: #ea580c;
   --accent-alt: #facc15; /* neon-ish yellow */
   --accent-alt-soft: rgba(250, 204, 21, 0.12);
   --border-subtle: rgba(148, 163, 184, 0.3);
-  --text: #e5e7eb;
-  --text-soft: #9ca3af;
+  --text: #f7fafc;
+  --text-soft: #cbd5e0;
   --danger: #f97373;
   --danger-soft: rgba(248, 113, 113, 0.1);
   --radius-lg: 18px;
@@ -31,10 +31,10 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
+  height: 100vh;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Segoe UI", sans-serif;
-  background: #050608;
+  background: var(--bg);
   color: var(--text);
 }
 
@@ -45,19 +45,16 @@ body {
 .app-shell {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
-  max-width: 1240px;
-  margin: 40px auto;
-  border-radius: 24px;
-  background: #050608;
+  height: 100vh;
+  background: var(--bg);
   border: 1px solid rgba(15, 23, 42, 0.9);
-  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.9);
   overflow: hidden;
 }
 
 .app-sidebar {
   padding: 20px 18px 16px;
   border-right: 1px solid var(--border-subtle);
-  background: #060708;
+  background: var(--bg-elevated);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -151,7 +148,7 @@ body {
 
 .muted {
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .btn-secondary,
@@ -163,11 +160,11 @@ body {
 .btn-primary {
   border-radius: 999px;
   border: none;
-  padding: 9px 16px;
+  padding: 10px 18px;
   background: var(--accent);
   color: #020617;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.7);
   transition: transform var(--transition-fast),
@@ -183,10 +180,10 @@ body {
 .btn-secondary {
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.6);
-  padding: 7px 12px;
+  padding: 8px 14px;
   background: rgba(15, 23, 42, 0.9);
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast),
     border-color var(--transition-fast), transform var(--transition-fast);
@@ -262,7 +259,7 @@ body {
   width: 100%;
   border-radius: 999px;
   border: 1px solid rgba(55, 65, 81, 0.9);
-  background: rgba(15, 23, 42, 0.95);
+  background: var(--bg-elevated-soft);
   color: var(--text);
   padding: 7px 11px;
   font-size: 12px;
@@ -319,7 +316,7 @@ body {
 }
 
 .app-content {
-  background: #050608;
+  background: var(--bg);
   border-radius: 20px;
   padding: 16px 16px 18px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
@@ -355,7 +352,7 @@ body {
 }
 
 .card {
-  background: #060708;
+  background: var(--bg-elevated);
   border-radius: var(--radius-lg);
   padding: 13px 13px 14px;
   border: 1px solid rgba(31, 41, 55, 0.95);
@@ -419,7 +416,7 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .field span {
@@ -431,10 +428,10 @@ h3 {
 .field textarea {
   border-radius: var(--radius-md);
   border: 1px solid rgba(51, 65, 85, 0.9);
-  background: rgba(15, 23, 42, 0.96);
+  background: var(--bg-elevated-soft);
   color: var(--text);
-  font-size: 13px;
-  padding: 7px 9px;
+  font-size: 15px;
+  padding: 8px 10px;
   outline: none;
   transition: border-color var(--transition-fast),
     box-shadow var(--transition-fast), background var(--transition-fast);
@@ -470,7 +467,7 @@ h3 {
 }
 
 .form-help {
-  font-size: 11px;
+  font-size: 13px;
   margin: 4px 0 0;
 }
 
@@ -478,9 +475,9 @@ h3 {
   max-height: 260px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(31, 41, 55, 0.9);
-  background: #050608;
+  background: var(--bg);
   overflow: auto;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 table {
@@ -609,7 +606,7 @@ tbody tr:hover {
   padding: 0;
   margin: 4px 0 0;
   color: var(--accent-alt);
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
 }
@@ -664,5 +661,3 @@ input[type="search"] {
     padding: 12px;
   }
 }
-
-

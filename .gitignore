@@ -1,0 +1,39 @@
+# Firebase config with API keys
+firebaseConfig.js
+js/firebaseConfig.js
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+dist/
+build/
+
+# Firebase
+.firebase/
+.firebaserc
+firebase-debug.log
+
+# Temporary files
+*.tmp
+*.temp
